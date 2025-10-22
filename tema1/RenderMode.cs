@@ -1,6 +1,6 @@
 namespace tema1;
 
-public enum RenderModes
+public enum RenderMode
 {
     Points,
     Lines,

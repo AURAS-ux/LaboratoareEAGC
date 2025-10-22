@@ -1,0 +1,111 @@
+ROTATE 
+
+To rotate the polygon, you need to apply a rotation transformation in your vertex shader. Here's how:
+
+**Update your vertex shader** to include a rotation matrix:
+
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPosition;
+uniform float uRotation;
+
+void main()
+{
+    float s = sin(uRotation);
+    float c = cos(uRotation);
+    mat2 rotationMatrix = mat2(c, -s, s, c);
+    
+    vec2 rotatedPos = rotationMatrix * aPosition.xy;
+    gl_Position = vec4(rotatedPos, aPosition.z, 1.0);
+}
+```
+
+**Add a rotation field and update logic** in your `SilkWindow` class:
+
+```csharp
+private float _rotation = 0.0f;
+```
+
+**In `OnUpdate` method**, increment the rotation:
+
+```csharp
+private void OnUpdate(double dt)
+{
+    _rotation += (float)dt; // Rotate over time
+}
+```
+
+**In `OnRender` method**, set the uniform before drawing:
+
+```csharp
+private void OnRender(double dt)
+{
+    _gl!.Clear(ClearBufferMask.ColorBufferBit);
+    _gl.UseProgram(_shaderProgram);
+    
+    int rotationLocation = _gl.GetUniformLocation(_shaderProgram, "uRotation");
+    _gl.Uniform1(rotationLocation, _rotation);
+    
+    _gl.BindVertexArray(_vao);
+    // ... rest of your rendering code
+}
+```
+
+This will continuously rotate the polygon. You can control rotation speed by multiplying `dt` with a factor, or bind it to keyboard input instead of automatic rotation.
+
+
+
+SCALE 
+
+Yes, you can scale the polygon using a 3x3 matrix. You'll need to pass the scaling parameters as uniforms to the vertex shader and apply the transformation matrix.
+
+Here's how to modify your code:
+
+**Updated vertex shader:**
+
+```glsl
+#version 330 core
+layout (location = 0) in vec3 aPosition;
+uniform float param_x;
+uniform float param_y;
+
+void main()
+{
+    mat3 scaleMatrix = mat3(
+        param_x, 0.0, 0.0,
+        0.0, param_y, 0.0,
+        0.0, 0.0, 1.0
+    );
+    
+    vec3 scaledPos = scaleMatrix * aPosition;
+    gl_Position = vec4(scaledPos, 1.0);
+}
+```
+
+**Add fields to your class:**
+
+```csharp
+private float _scaleX = 1.0f;
+private float _scaleY = 1.0f;
+private int _paramXLocation;
+private int _paramYLocation;
+```
+
+**After linking the shader program in `OnLoad()`:**
+
+```csharp
+_gl.UseProgram(_shaderProgram);
+_paramXLocation = _gl.GetUniformLocation(_shaderProgram, "param_x");
+_paramYLocation = _gl.GetUniformLocation(_shaderProgram, "param_y");
+```
+
+**In `OnRender()`, before drawing:**
+
+```csharp
+_gl.UseProgram(_shaderProgram);
+_gl.Uniform1(_paramXLocation, _scaleX);
+_gl.Uniform1(_paramYLocation, _scaleY);
+_gl.BindVertexArray(_vao);
+```
+
+You can then modify `_scaleX` and `_scaleY` values (e.g., via keyboard input) to scale the polygon along the X and Y axes.

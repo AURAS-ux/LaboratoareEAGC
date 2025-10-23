@@ -172,7 +172,7 @@ public class SilkWindow
             Console.WriteLine("Closing window.");
             _window?.Close();
         }
-
+//TEMA 1 SCALARE 
         if (keyPressed == Key.F1)
         {
             Console.WriteLine("triggered scaling");
@@ -190,6 +190,31 @@ public class SilkWindow
             Transformare2D.PerformMouseScaling(_initialMousePosition, _finalMousePosition, ref _scaleX, ref _scaleY);
             Console.WriteLine($"Scaling factors applied - X: {_scaleX}, Y: {_scaleY}");
         }
+        
+// FINAL SCALARE
+//TEMA 1 Simetrie 
+
+        if (keyPressed == Key.F3)
+        {
+            Console.WriteLine("triggered ox simmetry");
+            Transformare2D.MirrorAcrossOX(_points,false);
+            UpdateVertexBuffer();
+        }
+
+        if (keyPressed == Key.F4)
+        {
+            Console.WriteLine("triggered oy simmetry");
+            Transformare2D.MirrorAcrossOY(_points,false);
+            UpdateVertexBuffer();
+        }
+
+        if (keyPressed == Key.F5)
+        {
+            Console.WriteLine("triggered origin simmetry");
+            Transformare2D.MirrorAcrossOrigin(_points, false);
+            UpdateVertexBuffer();
+        }
+//FINAL Simetrie
 
         if (keyPressed == Key.Space)
         {

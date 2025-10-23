@@ -14,7 +14,7 @@ public class SilkWindow
     private static GL? _gl;
     private WindowOptions _options;
 
-    private Vector2D<int> _windowSize = new Vector2D<int>(1280, 720);
+    private Vector2D<int> _windowSize = new(1280, 720);
 
     private uint _vao;
     private uint _vbo;
@@ -23,6 +23,16 @@ public class SilkWindow
     
     private List<float[]> _points = new();
     private RenderMode _renderMode;
+    
+    //tema2 
+    private Vector2D<float> _initialMousePosition = new(0.0f, 0.0f);
+    private Vector2D<float> _finalMousePosition = new(0.0f, 0.0f);
+    private bool _isDragging = false;
+    
+    private float _scaleX = 1.0f;
+    private float _scaleY = 1.0f;
+    private int _sxLocation;
+    private int _syLocation;
 
     public SilkWindow()
     {
@@ -59,7 +69,10 @@ public class SilkWindow
     private void OnRender(double dt)
     {
         _gl!.Clear(ClearBufferMask.ColorBufferBit);
-        _gl.UseProgram(_shaderProgram);
+        
+        _gl.Uniform1(_sxLocation, _scaleX);
+        _gl.Uniform1(_syLocation, _scaleY);
+        
         _gl.BindVertexArray(_vao);
 
         switch (_renderMode)
@@ -99,6 +112,7 @@ public class SilkWindow
         foreach (var inputKeyboard in _input.Keyboards)
         {
             inputKeyboard.KeyDown += HandleKeyDown;
+            inputKeyboard.KeyUp += HandleKeyUp;
         }
 
         _gl.ClearColor(Color.CornflowerBlue);
@@ -125,14 +139,30 @@ public class SilkWindow
         _gl.EnableVertexAttribArray(0);
 
         // 2. Create and compile shaders
-        int success;
         var vertexShader = CreateAndCompileShader(out var fragmentShader);
 
         // 3. Link shaders to program
         LinkShadersToProgram(vertexShader, fragmentShader);
+        _gl.UseProgram(_shaderProgram);
+        
+        _sxLocation = _gl.GetUniformLocation(_shaderProgram, "sX");
+        _syLocation = _gl.GetUniformLocation(_shaderProgram, "sY");
 
         // Clean up shader objects (they're now linked into program)
         CleanShaderObjects(vertexShader, fragmentShader);
+    }
+
+    private void HandleKeyUp(IKeyboard keyboard, Key keyPressed, int arg3)
+    {
+        if (keyPressed == Key.F1)
+        {
+            Console.WriteLine("stopped dragging");
+            Console.WriteLine("stopped scaling");
+            _isDragging = false;
+            _finalMousePosition.X = _input.Mice[0].Position.X;
+            _finalMousePosition.Y = _input.Mice[0].Position.Y;
+            Console.WriteLine("Final mouse position: " + _finalMousePosition.X + ", " + _finalMousePosition.Y);
+        }
     }
 
     private void HandleKeyDown(IKeyboard keyboard, Key keyPressed, int arg3)
@@ -141,6 +171,24 @@ public class SilkWindow
         {
             Console.WriteLine("Closing window.");
             _window?.Close();
+        }
+
+        if (keyPressed == Key.F1)
+        {
+            Console.WriteLine("triggered scaling");
+            _initialMousePosition.X = _input.Mice[0].Position.X;
+            _initialMousePosition.Y = _input.Mice[0].Position.Y;
+            _isDragging = true;
+            Console.WriteLine($"Initial mouse position: {_initialMousePosition.X}, {_initialMousePosition.Y}");
+            Console.WriteLine("Dragging started.");
+        }
+
+        if (keyPressed == Key.F2)
+        {
+            Console.WriteLine("Registered F2 key press. Performing mouse scaling.");
+            // PerformMouseScaling();
+            Transformare2D.PerformMouseScaling(_initialMousePosition, _finalMousePosition, ref _scaleX, ref _scaleY);
+            Console.WriteLine($"Scaling factors applied - X: {_scaleX}, Y: {_scaleY}");
         }
 
         if (keyPressed == Key.Space)
@@ -206,21 +254,9 @@ public class SilkWindow
 
     private static uint CreateAndCompileShader(out uint fragmentShader)
     {
-        const string vertexShaderSource = @"
-            #version 330 core
-            layout (location = 0) in vec3 aPosition;
-            void main()
-            {
-                gl_Position = vec4(aPosition, 1.0);
-            }";
+        string vertexShaderSource = LoadShaderSource("Shaders/vertex_shader.glsl");
 
-        const string fragmentShaderSource = @"
-            #version 330 core
-            out vec4 FragColor;
-            void main()
-            {
-                FragColor = vec4(1.0, 0.2, 0.2, 1.0);
-            }";
+        string fragmentShaderSource = LoadShaderSource("Shaders/fragment_shader.glsl");
 
         uint vertexShader = _gl.CreateShader(ShaderType.VertexShader);
         _gl.ShaderSource(vertexShader, vertexShaderSource);
@@ -237,4 +273,30 @@ public class SilkWindow
             throw new Exception($"Fragment shader error: {_gl.GetShaderInfoLog(fragmentShader)}");
         return vertexShader;
     }
+
+    private static string LoadShaderSource(string path)
+    {
+        try
+        {
+            return File.ReadAllText(path);
+        }
+        catch(Exception e)
+        {
+            throw new Exception($"Error loading shader source: {path}", e);
+        }
+    }
+
+    // private void PerformMouseScaling()
+    // {
+    //     if (_initialMousePosition == _finalMousePosition)
+    //     {
+    //         Console.WriteLine("No scaling factor");        
+    //         return;
+    //     }
+    //     float scaleX = _finalMousePosition.X / _initialMousePosition.X;
+    //     float scaleY = _finalMousePosition.Y / _initialMousePosition.Y;
+    //     Console.WriteLine($"Scaling factors - X: {scaleX}, Y: {scaleY}");
+    //     _scaleX = Math.Abs(scaleX);
+    //     _scaleY = Math.Abs(scaleY);
+    // }
 }

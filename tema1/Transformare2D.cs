@@ -41,4 +41,28 @@ public class Transformare2D
     {
         MirrorPoints(p => new float[]{-p[0], -p[1], p[2]}, append, points);
     }
+
+    public static void RotateAcrossOrigin(ref Vector2D<float> iMousePosition, ref Vector2D<float> fMousePosition, ref float rotation)
+    {
+        var (angleInRadians, angleInDegrees) = Utils.GetAngleForTwoPoints(iMousePosition, fMousePosition);
+        Console.WriteLine($"Calculated angle: {angleInDegrees} degrees ({angleInRadians} radians)");
+        rotation += (float)angleInRadians;
+    }
+    
+    public static void TranslatePoints(Vector2D<float> iMousePosition, Vector2D<float> fMousePosition, ref List<float[]> points, Vector2D<int> windowSize)
+    {
+        float dx = fMousePosition.X - iMousePosition.X;
+        float dy = fMousePosition.Y - iMousePosition.Y;
+        Console.WriteLine("Translation deltas: dx = " + dx + ", dy = " + dy);
+        float dxNorm = (2f * dx) / windowSize.X;
+        float dyNorm = (-2f * dy) / windowSize.Y;
+        Console.WriteLine("Normalized translation deltas: dxNorm = " + dxNorm + ", dyNorm = " + dyNorm);
+        dx = dxNorm;
+        dy = dyNorm;
+        foreach (var point in points)
+        {
+            point[0] += dx;
+            point[1] += dy;
+        }
+    }
 }

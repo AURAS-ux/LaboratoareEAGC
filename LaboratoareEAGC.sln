@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tema1", "tema1\tema1.csproj", "{5ABDC73D-47AD-4250-959B-BA55816DBF56}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tema3", "tema3\tema3.csproj", "{ECE5881A-B667-4760-8BE3-56CE1DD026AF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{5ABDC73D-47AD-4250-959B-BA55816DBF56}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5ABDC73D-47AD-4250-959B-BA55816DBF56}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5ABDC73D-47AD-4250-959B-BA55816DBF56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECE5881A-B667-4760-8BE3-56CE1DD026AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECE5881A-B667-4760-8BE3-56CE1DD026AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECE5881A-B667-4760-8BE3-56CE1DD026AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECE5881A-B667-4760-8BE3-56CE1DD026AF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

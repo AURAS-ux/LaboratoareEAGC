@@ -23,20 +23,6 @@ public class SilkWindow
     
     private List<float[]> _points = new();
     private RenderMode _renderMode;
-    
-    //tema2 
-    private Vector2D<float> _initialMousePosition = new(0.0f, 0.0f);
-    private Vector2D<float> _finalMousePosition = new(0.0f, 0.0f);
-    private bool _isDragging = false;
-    
-    private float _scaleX = 1.0f;
-    private float _scaleY = 1.0f;
-    private int _sxLocation;
-    private int _syLocation;
-    
-    // tema 2 rotatie
-    private float _rotation = 0.0f;
-    private int _uRotationLocation;
 
     public SilkWindow()
     {
@@ -73,11 +59,6 @@ public class SilkWindow
     private void OnRender(double dt)
     {
         _gl!.Clear(ClearBufferMask.ColorBufferBit);
-        
-        _gl.Uniform1(_sxLocation, _scaleX);
-        _gl.Uniform1(_syLocation, _scaleY);
-        
-        _gl.Uniform1(_uRotationLocation, _rotation);
         
         _gl.BindVertexArray(_vao);
 
@@ -150,11 +131,6 @@ public class SilkWindow
         // 3. Link shaders to program
         LinkShadersToProgram(vertexShader, fragmentShader);
         _gl.UseProgram(_shaderProgram);
-        
-        _sxLocation = _gl.GetUniformLocation(_shaderProgram, "sX");
-        _syLocation = _gl.GetUniformLocation(_shaderProgram, "sY");
-        
-        _uRotationLocation = _gl.GetUniformLocation(_shaderProgram, "uRotation");
 
         // Clean up shader objects (they're now linked into program)
         CleanShaderObjects(vertexShader, fragmentShader);
@@ -162,38 +138,7 @@ public class SilkWindow
 
     private void HandleKeyUp(IKeyboard keyboard, Key keyRaised, int arg3)
     {
-        if (keyRaised == Key.F1)
-        {
-            Console.WriteLine("stopped dragging");
-            Console.WriteLine("stopped scaling");
-            _isDragging = false;
-            _finalMousePosition.X = _input.Mice[0].Position.X;
-            _finalMousePosition.Y = _input.Mice[0].Position.Y;
-            Console.WriteLine("Final mouse position: " + _finalMousePosition.X + ", " + _finalMousePosition.Y);
-        }
-
-        if (keyRaised == Key.F6)
-        {
-            Console.WriteLine("Raised F6 key - performing rotation around origin.");
-            _finalMousePosition.X = _input.Mice[0].Position.X;
-            _finalMousePosition.Y = _input.Mice[0].Position.Y;
-            Console.WriteLine("Final mouse position for rotation: " + _finalMousePosition.X + ", " + _finalMousePosition.Y);
-            Transformare2D.RotateAcrossOrigin(ref _initialMousePosition, ref _finalMousePosition, ref _rotation);
-            Console.WriteLine($"Updated rotation angle: {_rotation} radians");
-            _initialMousePosition = _finalMousePosition;
-        }
         
-        //rotatie
-        if (keyRaised == Key.F7)
-        {
-            Console.WriteLine("Raised F7 key - performing translation.");
-            _finalMousePosition.X = _input.Mice[0].Position.X;
-            _finalMousePosition.Y = _input.Mice[0].Position.Y;
-            Console.WriteLine("Final mouse position for translation: " + _finalMousePosition.X + ", " + _finalMousePosition.Y);
-            Transformare2D.TranslatePoints(_initialMousePosition, _finalMousePosition, ref _points, _windowSize);
-            UpdateVertexBuffer();
-            _initialMousePosition = _finalMousePosition;
-        }
     }
 
     private void HandleKeyDown(IKeyboard keyboard, Key keyPressed, int arg3)
@@ -203,71 +148,6 @@ public class SilkWindow
             Console.WriteLine("Closing window.");
             _window?.Close();
         }
-//TEMA 1 SCALARE 
-        if (keyPressed == Key.F1)
-        {
-            Console.WriteLine("triggered scaling");
-            _initialMousePosition.X = _input.Mice[0].Position.X;
-            _initialMousePosition.Y = _input.Mice[0].Position.Y;
-            _isDragging = true;
-            Console.WriteLine($"Initial mouse position: {_initialMousePosition.X}, {_initialMousePosition.Y}");
-            Console.WriteLine("Dragging started.");
-        }
-
-        if (keyPressed == Key.F2)
-        {
-            Console.WriteLine("Registered F2 key press. Performing mouse scaling.");
-            // PerformMouseScaling();
-            Transformare2D.PerformMouseScaling(_initialMousePosition, _finalMousePosition, ref _scaleX, ref _scaleY);
-            Console.WriteLine($"Scaling factors applied - X: {_scaleX}, Y: {_scaleY}");
-            _initialMousePosition = _finalMousePosition;
-        }
-        
-// FINAL SCALARE
-//TEMA 1 Simetrie 
-
-        if (keyPressed == Key.F3)
-        {
-            Console.WriteLine("triggered ox simmetry");
-            Transformare2D.MirrorAcrossOX(_points,false);
-            UpdateVertexBuffer();
-        }
-
-        if (keyPressed == Key.F4)
-        {
-            Console.WriteLine("triggered oy simmetry");
-            Transformare2D.MirrorAcrossOY(_points,false);
-            UpdateVertexBuffer();
-        }
-
-        if (keyPressed == Key.F5)
-        {
-            Console.WriteLine("triggered origin simmetry");
-            Transformare2D.MirrorAcrossOrigin(_points, false);
-            UpdateVertexBuffer();
-        }
-//FINAL Simetrie
-//TEMA 1 rotatie fata de O
-
-        if (keyPressed == Key.F6)
-        {
-            _initialMousePosition.X = _input.Mice[0].Position.X;
-            _initialMousePosition.Y = _input.Mice[0].Position.Y;
-            Console.WriteLine("Initial mouse position for rotation: " + _initialMousePosition.X + ", " + _initialMousePosition.Y);
-            Console.WriteLine("Triggered O rotation");
-        }
-
-// Final de rotatie
-
-//tema 1 translatie
-        if (keyPressed == Key.F7)
-        {
-            Console.WriteLine("triggered translation");
-            _initialMousePosition.X = _input.Mice[0].Position.X;
-            _initialMousePosition.Y = _input.Mice[0].Position.Y;
-            Console.WriteLine("Initial mouse position for translation: " + _initialMousePosition.X + ", " + _initialMousePosition.Y);
-        }
-//final translatie
 
         if (keyPressed == Key.Space)
         {
@@ -363,18 +243,4 @@ public class SilkWindow
             throw new Exception($"Error loading shader source: {path}", e);
         }
     }
-
-    // private void PerformMouseScaling()
-    // {
-    //     if (_initialMousePosition == _finalMousePosition)
-    //     {
-    //         Console.WriteLine("No scaling factor");        
-    //         return;
-    //     }
-    //     float scaleX = _finalMousePosition.X / _initialMousePosition.X;
-    //     float scaleY = _finalMousePosition.Y / _initialMousePosition.Y;
-    //     Console.WriteLine($"Scaling factors - X: {scaleX}, Y: {scaleY}");
-    //     _scaleX = Math.Abs(scaleX);
-    //     _scaleY = Math.Abs(scaleY);
-    // }
 }

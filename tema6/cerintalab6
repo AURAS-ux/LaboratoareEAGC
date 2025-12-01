@@ -1,0 +1,53 @@
+curba coons
+
+
+curbe partiale puse cap la cap
+derivabilitate de ordin 1
+
+data de doua puncte A B capetele curbei
+doi vectori a b tangenti in capete
+
+definita pe interval [0,1] cubica
+x = mxu^3 + nxu^2+pxu +qx u intre 0,1
+y = la fel dar y in loc de x
+
+
+
+todo:
+
+reprezentat curba coons prin 4 puncte
+punctul de plecare
+cap final al tangentei
+punct sosire
+cap final tangenta sosire
+---
+se obtin  tangenetele
+
+ax = xa' - xa
+ay = ya' - ya
+
+daca a cu bara deasupra = AA'
+
+
+
+cu mouse sa introduc 4 pcte
+primul punct - cap initial al curbei A
+al doilea - A' a.i. AA' = a barat
+al trilea pct - cap final al curbei B
+al patrulea - B' a.i. BB' = b barat
+
+se reprezinta grafic curba coons
+cu posibilitatea de a muta cele 4 puncte cu redesenarea curbei
+
+
+a doua tema
+
+se introduc 2(n+1) pcte de control Pi a.i. P0 = cap initial
+P2 urmatorul pct de pe curba
+P4 urmatorul pct de pe curba
+indice par - puncte de curba
+indice impar - pentru tangente
+P0 P1 prima tangenta
+
+
+se afiseaza curba formata din mai multe curbe coons cu posibilitatea de a muta punctele de control

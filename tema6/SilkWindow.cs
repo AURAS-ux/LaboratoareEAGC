@@ -18,12 +18,26 @@ public class SilkWindow
     private readonly WindowOptions _options;
 
     private List<float[]> _points = new();
+    private readonly List<List<float[]>> _coonsSegments = new();
     private RenderMode _renderMode;
     private uint _shaderProgram;
+    private int _colorUniformLocation;
 
     private uint _vao;
     private uint _vbo;
     private uint _vboLagrange;
+
+    private static readonly Vector3 DefaultColor = new(0f, 237f / 255f, 4f / 255f);
+
+    private static readonly Vector3[] SegmentColors =
+    {
+        new(0.94f, 0.33f, 0.31f),
+        new(0.23f, 0.70f, 0.96f),
+        new(0.98f, 0.76f, 0.19f),
+        new(0.56f, 0.35f, 0.92f),
+        new(0.11f, 0.80f, 0.55f),
+        new(0.95f, 0.58f, 0.77f)
+    };
 
     public SilkWindow()
     {
@@ -57,6 +71,7 @@ public class SilkWindow
         var normalizedY = Utils.NormalizeNumber(pos.Y, WindowSize.Y, 0);
         Console.WriteLine($"Normalized coordinates: {normalizedX}, {normalizedY}");
         _points.Add([normalizedX, -normalizedY, 0.0f]);
+        _coonsSegments.Clear();
     }
 
     private void OnRender(double dt)
@@ -64,6 +79,14 @@ public class SilkWindow
         _gl!.Clear(ClearBufferMask.ColorBufferBit);
 
         _gl.BindVertexArray(_vao);
+
+        if (_renderMode == RenderMode.Lines && _coonsSegments.Count > 0)
+        {
+            DrawCoonsSegments();
+            return;
+        }
+
+        SetColor(DefaultColor);
 
         switch (_renderMode)
         {
@@ -128,6 +151,12 @@ public class SilkWindow
         LinkShadersToProgram(vertexShader, fragmentShader);
         _gl.UseProgram(_shaderProgram);
 
+        _colorUniformLocation = _gl.GetUniformLocation(_shaderProgram, "uColor");
+        if (_colorUniformLocation == -1)
+            _logger.Warning("Failed to locate uColor uniform. Segment coloring will not be applied.");
+        else
+            SetColor(DefaultColor);
+
         // Clean up shader objects (they're now linked into program)
         CleanShaderObjects(vertexShader, fragmentShader);
     }
@@ -148,6 +177,7 @@ public class SilkWindow
         {
             _logger.Information("Space key pressed. Clearing all points.");
             _points.Clear();
+            _coonsSegments.Clear();
             UpdateVertexBuffer();
         }
     }
@@ -184,17 +214,21 @@ public class SilkWindow
             }
 
             _logger.Information("Middle mouse button clicked. Generating Coons curve.");
-            var coonsPoints = CoonsHelper.BuildCurve(_points, 64);
+            var coonsCurve = CoonsHelper.BuildCurve(_points, 64);
 
-            if (coonsPoints.Count == 0)
+            if (coonsCurve.CurvePoints.Count == 0)
             {
                 _logger.Warning("Coons curve generation failed. Please check the control points.");
+                _coonsSegments.Clear();
                 return;
             }
 
             _renderMode = RenderMode.Lines;
-            _points = coonsPoints;
-            _logger.Information($"Coons curve generated with {_points.Count} sampled points. Updating vertex buffer.");
+            _points = coonsCurve.CurvePoints;
+            _coonsSegments.Clear();
+            _coonsSegments.AddRange(coonsCurve.Segments);
+            _logger.Information(
+                $"Coons curve generated with {_points.Count} sampled points across {_coonsSegments.Count} segments. Updating vertex buffer.");
             UpdateVertexBuffer();
         }
     }
@@ -260,6 +294,37 @@ public class SilkWindow
         catch (Exception e)
         {
             throw new Exception($"Error loading shader source: {path}", e);
+        }
+    }
+
+    private void SetColor(Vector3 color)
+    {
+        if (_colorUniformLocation != -1)
+            _gl!.Uniform3(_colorUniformLocation, color.X, color.Y, color.Z);
+    }
+
+    private Vector3 GetSegmentColor(int index) => SegmentColors[index % SegmentColors.Length];
+
+    private unsafe void DrawCoonsSegments()
+    {
+        for (var i = 0; i < _coonsSegments.Count; i++)
+        {
+            var segment = _coonsSegments[i];
+            if (segment.Count == 0)
+                continue;
+
+            SetColor(GetSegmentColor(i));
+
+            var allPoints = segment.SelectMany(p => p).ToArray();
+
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
+            fixed (void* v = allPoints)
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(allPoints.Length * sizeof(float)), v,
+                    BufferUsageARB.DynamicDraw);
+            }
+
+            _gl.DrawArrays(PrimitiveType.LineStrip, 0, (uint)segment.Count);
         }
     }
 }

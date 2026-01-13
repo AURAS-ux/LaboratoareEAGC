@@ -61,7 +61,7 @@ public static class CoonsHelper
         var h10 = u3 - 2 * u2 + u;
         var h01 = -2 * u3 + 3 * u2;
         var h11 = u3 - u2;
-
+ 
         return h00 * a + h10 * aTangent + h01 * b + h11 * bTangent;
     }
 

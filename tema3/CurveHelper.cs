@@ -6,7 +6,7 @@ namespace tema3;
 public class CurveHelper
 {
     private static readonly ILogger _logger = Log.ForContext<CurveHelper>();
-    public static void GenerateCurvePoints(ref List<float[]> points,double lowerBound, double upperBound,Func<double,double> f,Func<double,double> g,int pointsCount=100)
+    public static void GenerateCurvePoints(ref List<float[]> points,double lowerBound, double upperBound,Func<double,double> f,Func<double,double> g,int pointsCount=700)
     {
         _logger.Information($"Generating {pointsCount} curve points between bounds {lowerBound} and {upperBound}.");
         List<float[]> unNormalizedPoints = new();

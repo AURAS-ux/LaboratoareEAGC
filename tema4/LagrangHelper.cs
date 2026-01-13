@@ -2,7 +2,7 @@ namespace tema3;
 
 public static class LagrangHelper
 {
-    public static List<float[]> ComputeLagrangeCurve(List<float[]> points, int numSamples = 100)
+    public static List<float[]> ComputeLagrangeCurve(List<float[]> points, int numSamples = 900)
     {
         var curvePoints = new List<float[]>();
     

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace tema7;
+namespace tema8;
 
 public record BezierCurve(List<float[]> CurvePoints, List<List<float[]>> Segments);
 

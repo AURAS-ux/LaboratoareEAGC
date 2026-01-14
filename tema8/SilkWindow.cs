@@ -6,7 +6,7 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-namespace tema7;
+namespace tema8;
 
 public class SilkWindow
 {

@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tema6", "tema6\tema6.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tema7", "tema7\tema7.csproj", "{1AF2EAB4-F8C9-42A1-92AE-9BF1D47B2E31}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tema8", "tema8\tema8.csproj", "{676E5A28-41C7-4F85-9100-C85CA835B62B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{1AF2EAB4-F8C9-42A1-92AE-9BF1D47B2E31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1AF2EAB4-F8C9-42A1-92AE-9BF1D47B2E31}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1AF2EAB4-F8C9-42A1-92AE-9BF1D47B2E31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{676E5A28-41C7-4F85-9100-C85CA835B62B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{676E5A28-41C7-4F85-9100-C85CA835B62B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{676E5A28-41C7-4F85-9100-C85CA835B62B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{676E5A28-41C7-4F85-9100-C85CA835B62B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

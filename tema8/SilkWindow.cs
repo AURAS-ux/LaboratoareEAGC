@@ -11,8 +11,8 @@ namespace tema8;
 public class SilkWindow
 {
     private static IWindow? _window;
-    private static GL? _gl;
-    private IInputContext _input;
+    private static GL _gl = null!;
+    private IInputContext _input = null!;
 
     private readonly ILogger _logger;
     private readonly WindowOptions _options;
@@ -25,9 +25,17 @@ public class SilkWindow
 
     private uint _vao;
     private uint _vbo;
-    private uint _vboLagrange;
+    private uint _vaoInside;
+    private uint _vaoOutside;
+    private uint _vboInside;
+    private uint _vboOutside;
+
+    private readonly List<float[]> _insidePoints = new();
+    private readonly List<float[]> _outsidePoints = new();
 
     private static readonly Vector3 DefaultColor = new(0f, 237f / 255f, 4f / 255f);
+    private static readonly Vector3 InsideColor = new(0.0f, 1.0f, 0.0f);
+    private static readonly Vector3 OutsideColor = new(1.0f, 0.0f, 0.0f);
 
     private static readonly Vector3[] SegmentColors =
     {
@@ -72,19 +80,21 @@ public class SilkWindow
         Console.WriteLine($"Normalized coordinates: {normalizedX}, {normalizedY}");
         _points.Add([normalizedX, -normalizedY, 0.0f]);
         _bezierSegments.Clear();
+        ClearClassification();
     }
 
     private void OnRender(double dt)
     {
         _gl!.Clear(ClearBufferMask.ColorBufferBit);
 
-        _gl.BindVertexArray(_vao);
-
         if (_renderMode == RenderMode.Lines && _bezierSegments.Count > 0)
         {
+            _gl.BindVertexArray(_vao);
             DrawBezierSegments();
             return;
         }
+
+        _gl.BindVertexArray(_vao);
 
         SetColor(DefaultColor);
 
@@ -103,6 +113,8 @@ public class SilkWindow
 
                 break;
         }
+
+        DrawClassificationPoints();
     }
 
     private unsafe void OnLoad()
@@ -110,7 +122,7 @@ public class SilkWindow
         _gl = _window!.CreateOpenGL();
         _logger.Information("Window loaded-OpenGL context created.");
 
-        _input = _window.CreateInput();
+        _input = _window!.CreateInput();
 
         foreach (var inputMouse in _input.Mice) inputMouse.MouseDown += OnInputMouseOnMouseDown;
 
@@ -122,27 +134,16 @@ public class SilkWindow
 
         _gl.ClearColor(Color.CornflowerBlue);
 
-        // 1. Define the vertex data (a single point)
-        float[] vertices =
-        {
-            0.0f, 0.0f, 0.0f // center
-        };
-
-
         _vao = _gl.GenVertexArray();
         _vbo = _gl.GenBuffer();
+        _vaoInside = _gl.GenVertexArray();
+        _vaoOutside = _gl.GenVertexArray();
+        _vboInside = _gl.GenBuffer();
+        _vboOutside = _gl.GenBuffer();
 
-        _gl.BindVertexArray(_vao);
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
-
-        fixed (void* v = vertices)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v,
-                BufferUsageARB.StaticDraw);
-        }
-
-        _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), null);
-        _gl.EnableVertexAttribArray(0);
+        ConfigureVertexArray(_vao, _vbo);
+        ConfigureVertexArray(_vaoInside, _vboInside);
+        ConfigureVertexArray(_vaoOutside, _vboOutside);
 
         // 2. Create and compile shaders
         var vertexShader = CreateAndCompileShader(out var fragmentShader);
@@ -156,6 +157,9 @@ public class SilkWindow
             _logger.Warning("Failed to locate uColor uniform. Segment coloring will not be applied.");
         else
             SetColor(DefaultColor);
+
+        UpdateVertexBuffer();
+        ClearClassification();
 
         // Clean up shader objects (they're now linked into program)
         CleanShaderObjects(vertexShader, fragmentShader);
@@ -178,7 +182,33 @@ public class SilkWindow
             _logger.Information("Space key pressed. Clearing all points.");
             _points.Clear();
             _bezierSegments.Clear();
+            ClearClassification();
             UpdateVertexBuffer();
+        }
+
+        if (keyPressed == Key.F)
+        {
+            ReportOrientation();
+        }
+
+        if (keyPressed == Key.O)
+        {
+            ReportOppositeSides();
+        }
+
+        if (keyPressed == Key.V)
+        {
+            ReportConvexQuadrilateral();
+        }
+
+        if (keyPressed == Key.I)
+        {
+            ReportSegmentIntersection();
+        }
+
+        if (keyPressed == Key.P)
+        {
+            ClassifyWholeWindow();
         }
     }
 
@@ -227,22 +257,16 @@ public class SilkWindow
             _points = bezierCurve.CurvePoints;
             _bezierSegments.Clear();
             _bezierSegments.AddRange(bezierCurve.Segments);
+            ClearClassification();
             _logger.Information(
                 $"Bezier curve generated with {_points.Count} sampled points across {_bezierSegments.Count} segments. Updating vertex buffer.");
             UpdateVertexBuffer();
         }
     }
 
-    private unsafe void UpdateVertexBuffer()
+    private void UpdateVertexBuffer()
     {
-        var allPoints = _points.SelectMany(p => p).ToArray();
-
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
-        fixed (void* v = allPoints)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(allPoints.Length * sizeof(float)), v,
-                BufferUsageARB.StaticDraw);
-        }
+        UploadPointsToBuffer(_vbo, _points);
     }
 
     private static void CleanShaderObjects(uint vertexShader, uint fragmentShader)
@@ -301,6 +325,172 @@ public class SilkWindow
     {
         if (_colorUniformLocation != -1)
             _gl!.Uniform3(_colorUniformLocation, color.X, color.Y, color.Z);
+    }
+
+    private static Vector2 ToVector2(IReadOnlyList<float> p) => new(p[0], p[1]);
+
+    private static string FormatPoint(Vector2 p) => $"({p.X:F3}, {p.Y:F3})";
+
+    private unsafe void ConfigureVertexArray(uint vao, uint vbo)
+    {
+        _gl!.BindVertexArray(vao);
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+        _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), null);
+        _gl.EnableVertexAttribArray(0);
+    }
+
+    private unsafe void UploadPointsToBuffer(uint bufferId, List<float[]> points)
+    {
+        var allPoints = points.SelectMany(p => p).ToArray();
+        var size = (nuint)(allPoints.Length * sizeof(float));
+
+        _gl!.BindBuffer(BufferTargetARB.ArrayBuffer, bufferId);
+
+        void* ptr;
+        fixed (void* dataPtr = allPoints)
+        {
+            ptr = allPoints.Length == 0 ? null : dataPtr;
+            _gl.BufferData(BufferTargetARB.ArrayBuffer, size, ptr, BufferUsageARB.DynamicDraw);
+        }
+    }
+
+    private void ReportOrientation()
+    {
+        if (_points.Count < 3)
+        {
+            _logger.Warning("Need at least 3 points to compute F(A, B, C).");
+            return;
+        }
+
+        var a = ToVector2(_points[0]);
+        var b = ToVector2(_points[1]);
+        var c = ToVector2(_points[2]);
+
+        var value = Geometry2D.F(a, b, c);
+        _logger.Information($"F(A, B, C) = {value:F6} for A={FormatPoint(a)}, B={FormatPoint(b)}, C={FormatPoint(c)}");
+    }
+
+    private void ReportOppositeSides()
+    {
+        if (_points.Count < 4)
+        {
+            _logger.Warning("Need at least 4 points to test if A and B are on opposite sides of CD.");
+            return;
+        }
+
+        var a = ToVector2(_points[0]);
+        var b = ToVector2(_points[1]);
+        var c = ToVector2(_points[2]);
+        var d = ToVector2(_points[3]);
+
+        var result = Geometry2D.AreOnOppositeSides(a, b, c, d);
+        _logger.Information(
+            $"A={FormatPoint(a)} and B={FormatPoint(b)} {(result ? "are" : "are not")} on opposite sides of segment CD (C={FormatPoint(c)}, D={FormatPoint(d)}).");
+    }
+
+    private void ReportConvexQuadrilateral()
+    {
+        if (_points.Count < 4)
+        {
+            _logger.Warning("Need at least 4 points to test convex quadrilateral.");
+            return;
+        }
+
+        var a = ToVector2(_points[0]);
+        var b = ToVector2(_points[1]);
+        var c = ToVector2(_points[2]);
+        var d = ToVector2(_points[3]);
+
+        var result = Geometry2D.AreVerticesOfConvexQuadrilateral(a, b, c, d);
+        _logger.Information(
+            $"Points A={FormatPoint(a)}, B={FormatPoint(b)}, C={FormatPoint(c)}, D={FormatPoint(d)} {(result ? "form" : "do not form")} a convex quadrilateral (given in order).");
+    }
+
+    private void ReportSegmentIntersection()
+    {
+        if (_points.Count < 4)
+        {
+            _logger.Warning("Need at least 4 points to test intersection between AB and CD.");
+            return;
+        }
+
+        var a = ToVector2(_points[0]);
+        var b = ToVector2(_points[1]);
+        var c = ToVector2(_points[2]);
+        var d = ToVector2(_points[3]);
+
+        var result = Geometry2D.SegmentsIntersectStrictlyInside(a, b, c, d);
+        _logger.Information(
+            $"Segments AB (A={FormatPoint(a)}, B={FormatPoint(b)}) and CD (C={FormatPoint(c)}, D={FormatPoint(d)}) {(result ? "intersect" : "do not intersect")} in their interior.");
+    }
+
+    private void ClassifyWholeWindow()
+    {
+        if (_points.Count < 3)
+        {
+            _logger.Warning("Draw at least three vertices before classifying points inside/outside the polygon.");
+            return;
+        }
+
+        var polygon = _points.Select(ToVector2).ToList();
+        _insidePoints.Clear();
+        _outsidePoints.Clear();
+
+        for (var y = 0; y < WindowSize.Y; y++)
+        for (var x = 0; x < WindowSize.X; x++)
+        {
+            var nx = Utils.NormalizeNumber(x, WindowSize.X, 0);
+            var ny = -Utils.NormalizeNumber(y, WindowSize.Y, 0);
+            var p = new Vector2(nx, ny);
+
+            if (Geometry2D.IsPointInsidePolygon(polygon, p))
+                _insidePoints.Add([nx, ny, 0.0f]);
+            else
+                _outsidePoints.Add([nx, ny, 0.0f]);
+        }
+
+        UploadPointsToBuffer(_vboInside, _insidePoints);
+        UploadPointsToBuffer(_vboOutside, _outsidePoints);
+
+        _renderMode = RenderMode.Polygon;
+
+        var total = WindowSize.X * WindowSize.Y;
+        _logger.Information(
+            $"Point-in-polygon classification done: {_insidePoints.Count} inside, {_outsidePoints.Count} outside (total sampled {total}).");
+    }
+
+    private void DrawClassificationPoints()
+    {
+        if (_insidePoints.Count == 0 && _outsidePoints.Count == 0)
+            return;
+
+        _gl.PointSize(1.0f);
+
+        if (_outsidePoints.Count > 0)
+        {
+            _gl.BindVertexArray(_vaoOutside);
+            SetColor(OutsideColor);
+            _gl.DrawArrays(PrimitiveType.Points, 0, (uint)_outsidePoints.Count);
+        }
+
+        if (_insidePoints.Count > 0)
+        {
+            _gl.BindVertexArray(_vaoInside);
+            SetColor(InsideColor);
+            _gl.DrawArrays(PrimitiveType.Points, 0, (uint)_insidePoints.Count);
+        }
+    }
+
+    private void ClearClassification()
+    {
+        _insidePoints.Clear();
+        _outsidePoints.Clear();
+
+        if (_gl == null)
+            return;
+
+        UploadPointsToBuffer(_vboInside, _insidePoints);
+        UploadPointsToBuffer(_vboOutside, _outsidePoints);
     }
 
     private Vector3 GetSegmentColor(int index) => SegmentColors[index % SegmentColors.Length];
